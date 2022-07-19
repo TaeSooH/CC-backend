@@ -8,8 +8,7 @@ import jwt
 import urllib.request
 from bs4 import BeautifulSoup
 from .serializer import UserSerializer
-
-
+from rest_framework import status
 
 
 @api_view(['GET'])
@@ -41,14 +40,14 @@ def signup(request):
         print(serializer.data)
         return Response(serializer.data)
     else:
-        return Response("실패")
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def login(request):
     username = request.data['username']
     password = request.data['password']
     if not username and not password:
-        return Response("부족한 데이터")
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     user = authenticate(username=username, password=password)
     if user is not None:
         encode_jwt = jwt.encode({"id": user.pk}, settings.SECRET_KEY, algorithm="HS256")
@@ -56,14 +55,16 @@ def login(request):
         response.data = {"token": encode_jwt}
         return response
     else:
-        return Response("부적절한 데이터")
+        return Response(status=status.HTTP_401_UNAUTHORIZED)
 
 
 @api_view(['GET'])
 def userview(request):
     token = request.GET['token']
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-    user = User.objects.get(id=payload['id'])
-    serializer = UserSerializer(user)
-    print(serializer.data)
-    return Response(serializer.data)
+    if token:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        user = User.objects.get(id=payload['id'])
+        serializer = UserSerializer(user)
+        print(serializer.data)
+        return Response(serializer.data)
+    return Response(status=status.HTTP_400_BAD_REQUEST)
